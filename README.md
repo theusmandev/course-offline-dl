@@ -12,6 +12,7 @@ I built it because I had a paid Coursera subscription, patchy internet, and want
 
 - Downloads every lecture video of a course, in course order, into tidy module folders
 - Saves subtitles (and optionally plain-text transcripts) next to each video
+- Writes a `00 - Lecture titles.txt` into every module folder, listing all lecture titles of that module
 - Resumes interrupted downloads instead of starting over
 - Retries on network hiccups and refreshes expired links automatically
 - Skips files you already have, so re-running is safe
@@ -65,6 +66,7 @@ Your files appear in `coursera_downloads/<course-slug>/`.
 coursera_downloads/
 └── python-for-everybody/
     ├── 01 - Getting Started/
+    │   ├── 00 - Lecture titles.txt
     │   ├── 01.01 - Welcome.mp4
     │   ├── 01.01 - Welcome.en.vtt
     │   ├── 01.02 - Installing Python.mp4
@@ -88,6 +90,7 @@ File names start with `lesson.lecture` numbers, so they sort in the same order a
 | `--transcripts` | Also save plain-text transcripts | off |
 | `--subs-only` | Skip videos, grab subtitles only | off |
 | `--modules 1,3-5` | Only these modules | all |
+| `--no-titles-file` | Don't write the per-module lecture titles `.txt` file | off |
 | `--list` | Show the course structure and exit | off |
 | `--workers N` | Parallel downloads (1 to 6) | `2` |
 | `--api-delay S` | Minimum seconds between API calls | `0.5` |

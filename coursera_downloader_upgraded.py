@@ -473,9 +473,45 @@ class Options:
     videos: bool
 
 
+def module_dir(root: Path, lec: Lecture) -> Path:
+    return root / f"{lec.module_idx:02d} - {clean(lec.module_name)}"
+
+
 def lecture_base(root: Path, lec: Lecture) -> Path:
-    folder = root / f"{lec.module_idx:02d} - {clean(lec.module_name)}"
-    return folder / f"{lec.lesson_idx:02d}.{lec.n:02d} - {clean(lec.title)}"
+    return module_dir(root, lec) / f"{lec.lesson_idx:02d}.{lec.n:02d} - {clean(lec.title)}"
+
+
+TITLES_FILENAME = "00 - Lecture titles.txt"
+
+
+def write_title_files(root: Path, lectures: list[Lecture]) -> int:
+    """Write one text file per module listing all of its lecture titles."""
+    by_module: dict[int, list[Lecture]] = {}
+    for lec in lectures:
+        by_module.setdefault(lec.module_idx, []).append(lec)
+
+    written = 0
+    for m_idx in sorted(by_module):
+        lecs = by_module[m_idx]
+        head = lecs[0]
+        title = f"Module {head.module_idx:02d}: {head.module_name}"
+        lines = [title, "=" * len(title), f"Total lectures: {len(lecs)}", ""]
+        current_lesson = None
+        for lec in lecs:
+            if lec.lesson_idx != current_lesson:
+                current_lesson = lec.lesson_idx
+                if len(lines) > 4:
+                    lines.append("")
+                lines.append(f"Lesson {lec.lesson_idx:02d}: {lec.lesson_name}")
+            lines.append(f"  {lec.lesson_idx:02d}.{lec.n:02d}  {lec.title}")
+        folder = module_dir(root, head)
+        try:
+            folder.mkdir(parents=True, exist_ok=True)
+            (folder / TITLES_FILENAME).write_text("\n".join(lines) + "\n", encoding="utf-8")
+            written += 1
+        except OSError as exc:
+            log.warning("Titles file nahi ban saki (%s): %s", folder.name, exc)
+    return written
 
 
 def process_lecture(ctx: Context, course_id: str, lec: Lecture, root: Path, opts: Options) -> dict:
@@ -605,6 +641,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--transcripts", action="store_true", help="also save plain-text transcripts")
     p.add_argument("--subs-only", action="store_true", help="skip videos, fetch subtitles/transcripts only")
     p.add_argument("--modules", help="only these module numbers, e.g. 1,3-5")
+    p.add_argument("--no-titles-file", action="store_true", help="don't write the per-module lecture titles .txt file")
     p.add_argument("--list", action="store_true", help="print course structure and exit")
     p.add_argument("--workers", type=int, default=2, help="parallel downloads (1-6)")
     p.add_argument("--api-delay", type=float, default=0.5, help="min seconds between API calls")
@@ -660,6 +697,9 @@ def main(argv: Optional[list[str]] = None) -> int:
         return 0
 
     root.mkdir(parents=True, exist_ok=True)
+    if not args.no_titles_file:
+        n_files = write_title_files(root, lectures)
+        log.info("Lecture titles files likhi gayi: %d module(s)", n_files)
     free = shutil.disk_usage(root).free
     if free < MIN_FREE_BYTES:
         log.warning("Warning: disk par sirf %s free hai.", human(free))
